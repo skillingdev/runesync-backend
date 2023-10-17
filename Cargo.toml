@@ -13,7 +13,8 @@ serde = { version = "1", features = ["derive"] }
 serde_json = "1.0"
 scraper = "0.17"
 openssl = { version = "0.10", features = ["vendored"] }
+mongodb = "2.7.0"
 
 [[bin]]
-name = "osrs_hiscores_index"
-path = "src/osrs_hiscores_index.rs"
+name = "setup_user"
+path = "src/setup_user.rs"

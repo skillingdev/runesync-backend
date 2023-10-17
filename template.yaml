@@ -9,24 +9,24 @@ Globals:
     MemorySize: 128
 
 Resources:
-  OsrsHiscoresIndex:
+  SetupUser:
     Type: AWS::Serverless::Function
     Metadata:
       BuildMethod: rust-cargolambda
       BuildProperties:
-        Binary: osrs_hiscores_index
+        Binary: setup_user
     Properties:
       CodeUri: ./           
       Handler: bootstrap     
       Runtime: provided.al2
       Events:
-        OsrsHiscoresIndex:
+        SetupUser:
           Type: Api # More info about API Event Source: https://github.com/awslabs/serverless-application-model/blob/master/versions/2016-10-31.md#api
           Properties:
-            Path: /osrs-hiscores-index
+            Path: /SetupUser
             Method: post
 
 Outputs:
-  OsrsHiscoresIndexApi:
-    Description: "API Gateway endpoint URL for Prod stage for OsrsHiscoresIndex"
-    Value: !Sub "https://${ServerlessRestApi}.execute-api.${AWS::Region}.amazonaws.com/Prod/osrs-hiscores-index/"
+  SetupUserApi:
+    Description: "API Gateway endpoint URL for Prod stage for SetupUser"
+    Value: !Sub "https://${ServerlessRestApi}.execute-api.${AWS::Region}.amazonaws.com/Prod/SetupUser"
