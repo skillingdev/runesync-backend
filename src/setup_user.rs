@@ -2,6 +2,7 @@ mod db_types;
 
 use lambda_http::{run, service_fn, Error, IntoResponse, RequestPayloadExt};
 use mongodb::bson::doc;
+use mongodb::error::{TRANSIENT_TRANSACTION_ERROR, UNKNOWN_TRANSACTION_COMMIT_RESULT};
 use mongodb::options::{FindOneAndReplaceOptions, ReplaceOptions};
 use mongodb::Client;
 use serde::{Deserialize, Serialize};
@@ -9,9 +10,9 @@ use std::env;
 
 use self::db_types::{AccountEntry, UsernameEntry};
 
-#[derive(Serialize, Deserialize)]
+#[derive(Deserialize)]
 struct Request {
-    account_hash: i64,
+    account_hash: String,
     display_name: String,
 }
 
@@ -47,22 +48,28 @@ async fn setup_user(
     let usernames: mongodb::Collection<UsernameEntry> =
         client.database("test").collection("usernames");
 
-    let account_query = doc! { "account_hash": account.account_hash };
+    let mut session = client.start_session(None).await?;
+    session.start_transaction(None).await?;
+
+    // TRANSACTION BEGIN
+    let account_query = doc! { "account_hash": account.account_hash.clone() };
     let username_query = doc! { "display_name": username.display_name.clone() };
 
     let seen: Option<AccountEntry> = accounts
-        .find_one_and_replace(
+        .find_one_and_replace_with_session(
             account_query.clone(),
             account.clone(),
             FindOneAndReplaceOptions::builder().upsert(true).build(),
+            &mut session,
         )
         .await?;
 
     usernames
-        .replace_one(
+        .replace_one_with_session(
             username_query.clone(),
             username.clone(),
             Some(ReplaceOptions::builder().upsert(true).build()),
+            &mut session,
         )
         .await?;
 
@@ -72,10 +79,24 @@ async fn setup_user(
 
             // handle migrating usernames table
             let old_username_query = doc! { "display_name": display_name.clone() };
-            usernames.delete_one(old_username_query, None).await?;
+            usernames
+                .delete_one_with_session(old_username_query, None, &mut session)
+                .await?;
 
             // TODO: handle migrating existing stats entries
         }
+    }
+
+    // TRANSACTION END
+
+    while let Err(err) = session.commit_transaction().await {
+        if err.contains_label(UNKNOWN_TRANSACTION_COMMIT_RESULT)
+            || err.contains_label(TRANSIENT_TRANSACTION_ERROR)
+        {
+            continue;
+        }
+
+        return Err("Error with DB transaction.".into());
     }
 
     let resp = Response { ok: true };

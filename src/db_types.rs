@@ -7,6 +7,6 @@ pub struct UsernameEntry {
 
 #[derive(Serialize, Deserialize, Clone)]
 pub struct AccountEntry {
-    pub account_hash: i64,
+    pub account_hash: String,
     pub display_name: String,
 }
