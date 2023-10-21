@@ -65,7 +65,6 @@ pub async fn user_hiscore(
     }
     let response = res.text().await?;
     let entries: Vec<&str> = response.split('\n').collect();
-    println!("{:?}", entries);
     Ok(Some(Hiscore {
         skills: HiscoreSkills {
             overall: extract_skill_entry(entries[0]),
@@ -193,14 +192,14 @@ fn extract_activity_entry(entry: &str) -> Option<HiscoreActivityEntry> {
     })
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct HiscoreSkillEntry {
     xp: u32,
     level: u32,
     rank: u32,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct HiscoreSkills {
     overall: HiscoreSkillEntry,
     attack: HiscoreSkillEntry,
@@ -228,13 +227,14 @@ pub struct HiscoreSkills {
     construction: HiscoreSkillEntry,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct HiscoreActivityEntry {
     score: u32,
     rank: u32,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
+#[serde(rename_all = "camelCase")]
 pub struct HiscoreActivities {
     league_points: Option<HiscoreActivityEntry>,
     //    deadman_points: Option<HiscoreActivityEntry>,
@@ -313,7 +313,7 @@ pub struct HiscoreActivities {
     zulrah: Option<HiscoreActivityEntry>,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct Hiscore {
     skills: HiscoreSkills,
     activities: HiscoreActivities,

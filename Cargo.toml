@@ -14,7 +14,9 @@ serde_json = "1.0"
 scraper = "0.17"
 openssl = { version = "0.10", features = ["vendored"] }
 mongodb = "2.7.0"
+futures = "0.3"
+chrono = "0.4"
 
 [[bin]]
-name = "setup_user"
-path = "src/setup_user.rs"
+name = "skill_polling"
+path = "src/skill_polling.rs"
