@@ -5,6 +5,7 @@ use serde::{Deserialize, Serialize};
 #[derive(Serialize, Deserialize, Debug)]
 pub struct HiscoresUser {
     pub name: String,
+    pub score: u32,
 }
 
 #[derive(Serialize, Deserialize, Debug)]
@@ -15,9 +16,12 @@ pub struct HiscoresIndex {
 pub async fn hiscores_index(
     page: usize,
 ) -> Result<Option<HiscoresIndex>, Box<dyn std::error::Error + Send + Sync + 'static>> {
-    let selector = Selector::parse("tr.personal-hiscores__row").unwrap();
-    let href_selector = Selector::parse("a").unwrap();
-    let next_selector = Selector::parse("a.personal-hiscores__pagination-arrow--down").unwrap();
+    let selector =
+        Selector::parse("tr.personal-hiscores__row").map_err(|_| "failed selector parse")?;
+    let href_selector = Selector::parse("a").map_err(|_| "failed selector parse")?;
+    let score_selector = Selector::parse("td.right").map_err(|_| "failed selector parse")?;
+    let next_selector = Selector::parse("a.personal-hiscores__pagination-arrow--down")
+        .map_err(|_| "failed selector parse")?;
 
     let mut users: Vec<HiscoresUser> = Vec::new();
 
@@ -29,11 +33,11 @@ pub async fn hiscores_index(
         let mut href = next
             .value()
             .attr("href")
-            .unwrap()
+            .ok_or("Can't get href")?
             .chars()
             .collect::<Vec<_>>();
         href.drain(0..37);
-        let next_page: usize = href.into_iter().collect::<String>().parse().ok().unwrap();
+        let next_page: usize = href.into_iter().collect::<String>().parse()?;
         if next_page <= page {
             return Ok(None);
         }
@@ -42,10 +46,20 @@ pub async fn hiscores_index(
     }
 
     for element in document.select(&selector) {
-        for a in element.select(&href_selector) {
-            users.push(HiscoresUser {
-                name: a.text().collect::<String>().replace('\u{A0}', " "),
-            })
+        if let Some(user) = element.select(&href_selector).next() {
+            let mut scores = element.select(&score_selector);
+            let _ = scores.next();
+            if let Some(score) = scores.next() {
+                users.push(HiscoresUser {
+                    name: user.text().collect::<String>().replace('\u{A0}', " "),
+                    score: score
+                        .text()
+                        .collect::<String>()
+                        .trim()
+                        .replace(",", "")
+                        .parse()?,
+                });
+            }
         }
     }
 
@@ -67,30 +81,30 @@ pub async fn user_hiscore(
     let entries: Vec<&str> = response.split('\n').collect();
     Ok(Some(Hiscore {
         skills: HiscoreSkills {
-            overall: extract_skill_entry(entries[0]),
-            attack: extract_skill_entry(entries[1]),
-            defence: extract_skill_entry(entries[2]),
-            strength: extract_skill_entry(entries[3]),
-            hitpoints: extract_skill_entry(entries[4]),
-            ranged: extract_skill_entry(entries[5]),
-            prayer: extract_skill_entry(entries[6]),
-            magic: extract_skill_entry(entries[7]),
-            cooking: extract_skill_entry(entries[8]),
-            woodcutting: extract_skill_entry(entries[9]),
-            fletching: extract_skill_entry(entries[10]),
-            fishing: extract_skill_entry(entries[11]),
-            firemaking: extract_skill_entry(entries[12]),
-            crafting: extract_skill_entry(entries[13]),
-            smithing: extract_skill_entry(entries[14]),
-            mining: extract_skill_entry(entries[15]),
-            herblore: extract_skill_entry(entries[16]),
-            agility: extract_skill_entry(entries[17]),
-            thieving: extract_skill_entry(entries[18]),
-            slayer: extract_skill_entry(entries[19]),
-            farming: extract_skill_entry(entries[20]),
-            runecraft: extract_skill_entry(entries[21]),
-            hunter: extract_skill_entry(entries[22]),
-            construction: extract_skill_entry(entries[23]),
+            overall: extract_skill_entry(entries[0])?,
+            attack: extract_skill_entry(entries[1])?,
+            defence: extract_skill_entry(entries[2])?,
+            strength: extract_skill_entry(entries[3])?,
+            hitpoints: extract_skill_entry(entries[4])?,
+            ranged: extract_skill_entry(entries[5])?,
+            prayer: extract_skill_entry(entries[6])?,
+            magic: extract_skill_entry(entries[7])?,
+            cooking: extract_skill_entry(entries[8])?,
+            woodcutting: extract_skill_entry(entries[9])?,
+            fletching: extract_skill_entry(entries[10])?,
+            fishing: extract_skill_entry(entries[11])?,
+            firemaking: extract_skill_entry(entries[12])?,
+            crafting: extract_skill_entry(entries[13])?,
+            smithing: extract_skill_entry(entries[14])?,
+            mining: extract_skill_entry(entries[15])?,
+            herblore: extract_skill_entry(entries[16])?,
+            agility: extract_skill_entry(entries[17])?,
+            thieving: extract_skill_entry(entries[18])?,
+            slayer: extract_skill_entry(entries[19])?,
+            farming: extract_skill_entry(entries[20])?,
+            runecraft: extract_skill_entry(entries[21])?,
+            hunter: extract_skill_entry(entries[22])?,
+            construction: extract_skill_entry(entries[23])?,
         },
         activities: HiscoreActivities {
             league_points: extract_activity_entry(entries[24]),
@@ -172,13 +186,18 @@ pub async fn user_hiscore(
     }))
 }
 
-fn extract_skill_entry(entry: &str) -> HiscoreSkillEntry {
-    let entries: Vec<u32> = entry.split(',').map(|s| s.parse().unwrap()).collect();
-    HiscoreSkillEntry {
-        rank: entries[0],
-        level: entries[1],
-        xp: entries[2],
-    }
+fn extract_skill_entry(
+    entry: &str,
+) -> Result<HiscoreSkillEntry, Box<dyn std::error::Error + Send + Sync + 'static>> {
+    let entries: Vec<u32> = entry
+        .split(',')
+        .map(|s| s.parse::<u32>().map_err(|_| "bad u32"))
+        .collect::<Result<Vec<u32>, &str>>()?;
+    Ok(HiscoreSkillEntry {
+        rank: *entries.get(0).ok_or("err no 0 index")?,
+        level: *entries.get(1).ok_or("err no 1 index")?,
+        xp: *entries.get(2).ok_or("err no 2 index")?,
+    })
 }
 
 fn extract_activity_entry(entry: &str) -> Option<HiscoreActivityEntry> {
@@ -187,8 +206,8 @@ fn extract_activity_entry(entry: &str) -> Option<HiscoreActivityEntry> {
         .map(|s| s.parse::<u32>().ok())
         .collect::<Option<Vec<u32>>>()?;
     Some(HiscoreActivityEntry {
-        rank: entries[0],
-        score: entries[1],
+        rank: *entries.get(0)?,
+        score: *entries.get(1)?,
     })
 }
 
