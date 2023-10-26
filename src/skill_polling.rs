@@ -7,6 +7,7 @@ use db_types::{StatEntry, TopPlayerEntry, UsernameEntry};
 use futures::TryStreamExt;
 use mongodb::{
     bson::{doc, DateTime},
+    options::FindOneOptions,
     Client,
 };
 use osrs::HiscoresUser;
@@ -33,17 +34,38 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 println!("Fetching stats for {}", display_name);
 
                 if let Ok(Some(hiscores)) = osrs::user_hiscore(display_name.clone()).await {
-                    println!("Got stats for {}: {:?}", display_name, hiscores);
+                    if let Ok(old) = stats
+                        .find_one(
+                            doc! { "displayName": display_name.clone() },
+                            FindOneOptions::builder()
+                                .sort(doc! { "timestamp": -1 })
+                                .build(),
+                        )
+                        .await
+                    {
+                        let player_stats = StatEntry {
+                            timestamp: DateTime::now(),
+                            display_name: display_name.clone(),
+                            stats: hiscores.clone(),
+                        };
 
-                    let player_stats = StatEntry {
-                        timestamp: DateTime::now(),
-                        display_name,
-                        stats: hiscores,
-                    };
-
-                    if let Some(err) = stats.insert_one(player_stats, None).await.err() {
-                        println!("{:?}", err);
+                        match old {
+                            Some(old) if old.stats == hiscores => {
+                                println!("Hiscores match for {}, skipping...", display_name);
+                            }
+                            _ => {
+                                println!("Hiscores different for {}, updating...", display_name);
+                                if let Some(err) = stats.insert_one(player_stats, None).await.err()
+                                {
+                                    println!("{:?}", err);
+                                }
+                            }
+                        }
+                    } else {
+                        println!("Failed to lookup previous entries.");
                     }
+                } else {
+                    println!("Failed to load hiscores for {}", display_name);
                 }
 
                 ()

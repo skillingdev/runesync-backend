@@ -211,14 +211,14 @@ fn extract_activity_entry(entry: &str) -> Option<HiscoreActivityEntry> {
     })
 }
 
-#[derive(Serialize, Deserialize, Debug, Clone)]
+#[derive(Serialize, Deserialize, Debug, Clone, PartialEq, Eq)]
 pub struct HiscoreSkillEntry {
     xp: u32,
     level: u32,
     rank: u32,
 }
 
-#[derive(Serialize, Deserialize, Debug, Clone)]
+#[derive(Serialize, Deserialize, Debug, Clone, PartialEq, Eq)]
 pub struct HiscoreSkills {
     overall: HiscoreSkillEntry,
     attack: HiscoreSkillEntry,
@@ -246,13 +246,13 @@ pub struct HiscoreSkills {
     construction: HiscoreSkillEntry,
 }
 
-#[derive(Serialize, Deserialize, Debug, Clone)]
+#[derive(Serialize, Deserialize, Debug, Clone, PartialEq, Eq)]
 pub struct HiscoreActivityEntry {
     score: u32,
     rank: u32,
 }
 
-#[derive(Serialize, Deserialize, Debug, Clone)]
+#[derive(Serialize, Deserialize, Debug, Clone, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
 pub struct HiscoreActivities {
     league_points: Option<HiscoreActivityEntry>,
@@ -332,7 +332,7 @@ pub struct HiscoreActivities {
     zulrah: Option<HiscoreActivityEntry>,
 }
 
-#[derive(Serialize, Deserialize, Debug, Clone)]
+#[derive(Serialize, Deserialize, Debug, Clone, PartialEq, Eq)]
 pub struct Hiscore {
     skills: HiscoreSkills,
     activities: HiscoreActivities,

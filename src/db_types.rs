@@ -15,7 +15,7 @@ pub struct AccountEntry {
     pub display_name: String,
 }
 
-#[derive(Serialize, Deserialize, Clone)]
+#[derive(Serialize, Deserialize, Clone, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
 pub struct StatEntry {
     pub timestamp: DateTime,
