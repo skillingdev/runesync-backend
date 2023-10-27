@@ -3,14 +3,13 @@ mod osrs;
 
 use std::{env, time::Duration};
 
-use db_types::{StatEntry, TopPlayerEntry, UsernameEntry};
+use db_types::{StatEntry, UsernameEntry};
 use futures::TryStreamExt;
 use mongodb::{
     bson::{doc, DateTime},
     options::FindOneOptions,
     Client,
 };
-use osrs::HiscoresUser;
 use tokio::task::JoinSet;
 
 #[tokio::main]
@@ -21,8 +20,6 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let usernames: mongodb::Collection<UsernameEntry> =
         client.database("test").collection("usernames");
     let stats: mongodb::Collection<StatEntry> = client.database("test").collection("stats");
-    let top_players: mongodb::Collection<TopPlayerEntry> =
-        client.database("test").collection("topPlayers");
 
     loop {
         let mut cursor = usernames.find(doc! {}, None).await?;
@@ -34,6 +31,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 println!("Fetching stats for {}", display_name);
 
                 if let Ok(Some(hiscores)) = osrs::user_hiscore(display_name.clone()).await {
+                    println!("Found hiscores for {}", display_name);
+
                     if let Ok(old) = stats
                         .find_one(
                             doc! { "displayName": display_name.clone() },
@@ -74,26 +73,6 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
         while let Some(_res) = set.join_next().await {
             // Wait for all to finish.
-        }
-
-        let top_players = top_players.clone();
-        println!("Updating top players");
-        top_players.drop(None).await?;
-        for i in 1..5 {
-            if let Ok(Some(page)) = osrs::hiscores_index(i).await {
-                top_players
-                    .insert_many(
-                        page.users
-                            .into_iter()
-                            .map(|HiscoresUser { name, score }| TopPlayerEntry {
-                                display_name: name,
-                                league_points: score,
-                            }),
-                        None,
-                    )
-                    .await?;
-            }
-            tokio::time::sleep(Duration::from_secs(5)).await;
         }
 
         println!("Waiting....");

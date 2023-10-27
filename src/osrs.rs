@@ -69,6 +69,7 @@ pub async fn hiscores_index(
 pub async fn user_hiscore(
     user: String,
 ) -> Result<Option<Hiscore>, Box<dyn std::error::Error + Send + Sync + 'static>> {
+    println!("About to make request...");
     let url = format!(
         "https://secure.runescape.com/m=hiscore_oldschool_seasonal/index_lite.ws?player={}",
         user
@@ -77,8 +78,10 @@ pub async fn user_hiscore(
     if res.status() != StatusCode::OK {
         return Ok(None);
     }
+    println!("HERE");
     let response = res.text().await?;
     let entries: Vec<&str> = response.split('\n').collect();
+    println!("{:?}", entries);
     Ok(Some(Hiscore {
         skills: HiscoreSkills {
             overall: extract_skill_entry(entries[0])?,

@@ -4,15 +4,11 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-lambda_http = "0.8"
-tracing = { version = "0.1", features = ["log"] }
-tracing-subscriber = { version = "0.3", default-features = false, features = ["fmt"] }
 reqwest = { version = "0.11", features = ["json"] }
 tokio = { version = "1", features = ["full"] }
 serde = { version = "1", features = ["derive"] }
 serde_json = "1.0"
 scraper = "0.17"
-openssl = { version = "0.10", features = ["vendored"] }
 mongodb = "2.7.0"
 futures = "0.3"
 chrono = "0.4"
@@ -20,3 +16,7 @@ chrono = "0.4"
 [[bin]]
 name = "skill_polling"
 path = "src/skill_polling.rs"
+
+[[bin]]
+name = "top_players_polling"
+path = "src/top_players_polling.rs"
