@@ -1,5 +1,5 @@
 [package]
-name = "runesync-backend-test"
+name = "runesync-backend"
 version = "0.1.0"
 edition = "2021"
 
@@ -20,3 +20,7 @@ path = "src/skill_polling.rs"
 [[bin]]
 name = "top_players_polling"
 path = "src/top_players_polling.rs"
+
+[[bin]]
+name = "players_polling"
+path = "src/players_polling.rs"

@@ -5,7 +5,7 @@ set -o nounset
 set -o pipefail
 set -o xtrace
 
-declare -a arr=("skill_polling" "top_players_polling")
+declare -a arr=("skill_polling" "top_players_polling" "players_polling")
 
 readonly TARGET_HOST=raspberrypi.local
 readonly TARGET_PATH=~/skill_polling
