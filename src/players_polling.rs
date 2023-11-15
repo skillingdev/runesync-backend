@@ -6,6 +6,8 @@ use std::time::Duration;
 
 use db_types::UsernameEntry;
 use mongodb::Client;
+use mongodb::bson::doc;
+use mongodb::options::{InsertManyOptions, UpdateOptions};
 use osrs::HiscoresUser;
 
 #[tokio::main]
@@ -21,27 +23,27 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     loop {
         let usernames = usernames.clone();
         println!("Updating usernames with hiscores page {}...", i);
-            if let Some(page) = osrs::hiscores_index(i)
-                .await
-                .map_err(|_| "hiscores_index failed")?
-            {
-                usernames
-                    .insert_many(
-                        page.users
-                            .into_iter()
-                            .map(|HiscoresUser { name, score: _ }| UsernameEntry {
-                                display_name: name,
-                            }),
-                        None,
-                    )
-                    .await?;
 
-                i = i + 1;
-            } else {
-                i = 0;
+        if let Some(Some(page)) = osrs::hiscores_index(i)
+            .await
+            .ok()
+        {
+            let users = page.users
+                .into_iter()
+                .map(|HiscoresUser { name, score: _ }| UsernameEntry {
+                    display_name: name,
+                });
+
+            for user in users {
+                usernames.update_one(doc! { "displayName": user.display_name.clone() }, doc! { "displayName": user.display_name }, UpdateOptions::builder().upsert(true).build()).await.ok();
             }
 
+            i = i + 1;
+        } else {
+            i = 0;
+        }
+
         println!("Waiting....");
-        tokio::time::sleep(Duration::from_secs(60)).await;
+        tokio::time::sleep(Duration::from_secs(30)).await;
     }
 }
